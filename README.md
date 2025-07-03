@@ -5,6 +5,8 @@
 ---
 
 ## 1. 项目简介
+
+本项目为个人实现的哈尔滨工业大学（威海）数据结构课程设计。
 本系统使用纯 **C** 语言实现，模拟中国 50+ 城市的交通网络，支持 **驾车 / 公交 / 高铁 / 航空** 四种出行方式，为用户提供：
 
 * 单点最优路径（支持时间/花费权衡）
@@ -16,6 +18,7 @@
 ---
 
 ## 2. 目录结构
+
 ```
 ├─include/               # 公共头文件
 │   └─traffic_network.h  # 核心结构体 + 接口声明
@@ -34,17 +37,21 @@
 ---
 
 ## 3. 快速开始
+
 ### 3.1 环境依赖
+
 * **gcc ≥ 9**  (支持 C99)
 * 任意 **POSIX / Windows** 终端
 
 ### 3.2 构建
+
 ```bash
 # 克隆仓库后
 make         # 生成 bin/traffic_planner.exe (Windows) 或无扩展名可执行文件
 ```
 
 ### 3.3 运行 & 交互示例
+
 ```bash
 $ ./bin/traffic_planner.exe
 ========== 交通网络路径规划系统 ==========
@@ -58,12 +65,15 @@ $ ./bin/traffic_planner.exe
 请输入成本权重 (0.0-1.0): 0.3
 ...  # 输出省略
 ```
+
 > 时间与成本权重相加不强制等于 1，可根据偏好自由输入。
 
 ---
 
 ## 4. 数据格式 (`data/nodes.csv`)
+
 CSV UTF-8，无表头：
+
 ```
 city_name,node_type,node_name,latitude,longitude
 北京,landmark,故宫,39.9163,116.3972
@@ -71,18 +81,21 @@ city_name,node_type,node_name,latitude,longitude
 北京,hsr,北京南站,39.8652,116.3786
 ...
 ```
+
 * **node_type** 可取 `landmark | airport | hsr` (高铁) — 解析后映射 `NodeType` 枚举。
 * 新增/修改城市只需追加行，无需改源码。
 
 ---
 
 ## 5. 核心概念 & 主要接口
-| 结构体 / 枚举 | 作用 | 位置 |
-| --- | --- | --- |
-| `Node`           | 节点 (地标 / 机场 / 车站) | include/traffic_network.h |
-| `CityMeta`       | 城市到主要节点的索引       | 同上 |
-| `RoutePath`      | 由 `PathSegment` 链表组成的完整路径 | 同上 |
-| `TransportMode`  | 交通方式枚举              | 同上 |
+
+
+| 结构体 / 枚举   | 作用                               | 位置                      |
+| ----------------- | ------------------------------------ | --------------------------- |
+| `Node`          | 节点 (地标 / 机场 / 车站)          | include/traffic_network.h |
+| `CityMeta`      | 城市到主要节点的索引               | 同上                      |
+| `RoutePath`     | 由`PathSegment` 链表组成的完整路径 | 同上                      |
+| `TransportMode` | 交通方式枚举                       | 同上                      |
 
 ```c
 RoutePath* find_shortest_path(int start_node, int end_node,
@@ -91,11 +104,13 @@ RoutePath* solve_tsp(int* node_ids, int count,
                      double time_weight, double cost_weight);
 void        free_route_path(RoutePath* path);
 ```
+
 调用者仅需传入 **节点 ID** 与权重，算法自动考虑可达性 & 成本。
 
 ---
 
 ## 6. 算法实现概要
+
 1. **距离计算** – 哈弗辛公式 (准确到 km)
 2. **可达性规则** – 按节点类型 + 城际/市内判定过滤不合理线路
 3. **A* + Dijkstra** – 使用归一化 time/cost 作为代价，启发式为直线距离估计
@@ -106,20 +121,24 @@ void        free_route_path(RoutePath* path);
 ---
 
 ## 7. 开发路线图
-- [x] 阶段 1：核心算法 & 命令行
-- [x] 阶段 2：地标级节点 / CSV 数据源 / TSP 完善
+
+- [X] 阶段 1：核心算法 & 命令行
+- [X] 阶段 2：地标级节点 / CSV 数据源 / TSP 完善
 - [ ] 阶段 3：地图可视化 (Leaflet/WebGL)
 - [ ] 阶段 4：实时路况 API、增量更新 & 性能优化
 
 ---
 
 ## 8. 贡献指南
+
 1. 新地标：编辑 `data/nodes.csv`，保持五列格式。
 2. 新算法：在 `src/` 下新增 `*.c` 并在 Makefile 的 `SRCS` 通配中自动编译。
 3. PR / Issue 欢迎提出需求与改进建议。
 
 ## 9. 阅读指南
+
 以下顺序建议由浅入深、由外到内逐步掌握项目：
+
 1. **README.md** (本文件)
    * 通览功能、目录、算法与路线图。
 2. **Makefile**
@@ -145,4 +164,5 @@ void        free_route_path(RoutePath* path);
 > 完成以上后，可继续研究未来待实现的可视化/实时路况等拓展点。
 
 ## 10. 许可证
-MIT 
+
+MIT
