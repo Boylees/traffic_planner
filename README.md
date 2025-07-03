@@ -25,7 +25,7 @@
 ├─src/                   # 源码实现
 │   ├─data_loader.c      # CSV → 内存图加载 & 回退静态数据
 │   ├─distance.c         # 哈弗辛公式
-│   ├─pathfinding.c      # A* + Dijkstra & Held-Karp TSP
+│   ├─pathfinding.c      # Dijkstra & Held-Karp TSP
 │   └─main.c             # 菜单交互 / I/O
 ├─data/
 │   └─nodes.csv          # 节点数据源（50 城 * N 节点）
@@ -113,7 +113,7 @@ void        free_route_path(RoutePath* path);
 
 1. **距离计算** – 哈弗辛公式 (准确到 km)
 2. **可达性规则** – 按节点类型 + 城际/市内判定过滤不合理线路
-3. **A* + Dijkstra** – 使用归一化 time/cost 作为代价，启发式为直线距离估计
+3. **Dijkstra** – 使用归一化 time/cost 作为代价
 4. **Held-Karp TSP** – 状态压缩 DP，支持 ≤10 目的地
 
 > 更多细节请阅读 `src/pathfinding.c` 内注释。
@@ -154,7 +154,7 @@ void        free_route_path(RoutePath* path);
 7. **src/pathfinding.c**
    * 重点阅读：
      - `calculate_travel_info` 交通方式可达规则
-     - `find_shortest_path` A* + Dijkstra
+     - `find_shortest_path` Dijkstra
      - `solve_tsp` Held-Karp 动态规划
 8. **src/main.c**
    * 菜单交互与输出格式；结合前面接口可串起完整调用链。
