@@ -1,0 +1,26 @@
+# 编译输出
+bin/
+*.o
+*.exe
+*.out
+
+# 调试文件
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# 编辑器文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 临时文件
+*.tmp
+*.temp 
