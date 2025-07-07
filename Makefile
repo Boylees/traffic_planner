@@ -1,6 +1,7 @@
 CC = gcc
-CFLAGS = -Wall -g -std=c99 -Wno-unused-function
+CFLAGS = -Wall -g -std=c99 -Wno-unused-function -finput-charset=UTF-8
 LDFLAGS = -lm
+INCLUDES = -Iinclude
 
 SRC_DIR = src
 INCLUDE_DIR = include

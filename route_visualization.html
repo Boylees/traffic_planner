@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>路径规划可视化</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        #map { height: 100vh; width: 100vw; } /* Make map fill the viewport */
+        .summary-box { position: absolute; top: 10px; left: 10px; z-index: 1000; background: rgba(255,255,255,0.9); padding: 10px 15px; border-radius: 8px; box-shadow: 0 1px 7px rgba(0,0,0,0.3); max-width: 350px; max-height: 90vh; overflow-y: auto; }
+        .summary-box h4 { margin: 0 0 10px; text-align: center; font-weight: bold; color: #000; border-bottom: 1px solid #ccc; padding-bottom: 8px; }
+        .summary-box p { margin: 4px 0; font-size: 13px; color: #333; line-height: 1.4; }
+        .summary-box p b { min-width: 70px; display: inline-block; font-weight: bold; }
+        .summary-box .segment { border-top: 1px dashed #ddd; padding-top: 8px; margin-top: 8px; }
+        .summary-box .total { font-weight: bold; border-top: 2px solid #333; padding-top: 8px; margin-top: 8px; }
+        .legend { padding: 10px; font-size: 14px; background: rgba(255,255,255,0.85); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; line-height: 1.5; color: #333; }
+        .legend h4 { margin: 0 0 8px; color: #000; text-align: center; font-weight: bold; }
+        .legend .legend-item { display: flex; align-items: center; height: 22px; margin-bottom: 2px;}
+        .legend .legend-item i { width: 18px; height: 18px; margin-right: 8px; opacity: 0.9; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.2);}
+        .leaflet-popup-content-wrapper { border-radius: 5px; }
+        .leaflet-popup-content b { color: #333; }
+        .leaflet-popup-content p { margin: 5px 0; }
+    </style>
+</head>
+<body>
+
+<div class="summary-box">
+    <h4>行程摘要</h4>
+    <div class="segment">
+        <p><b>出发:</b> 故宫</p>
+        <p><b>到达:</b> 北京南站</p>
+        <p><b>方式:</b> 公交</p>
+        <p><b>详情:</b> 5.9 公里, 0.24 小时, 1.77 元</p>
+    </div>
+    <div class="segment">
+        <p><b>出发:</b> 北京南站</p>
+        <p><b>到达:</b> 济南西站</p>
+        <p><b>方式:</b> 高铁</p>
+        <p><b>详情:</b> 356.6 公里, 1.43 小时, 142.62 元</p>
+    </div>
+    <div class="segment">
+        <p><b>出发:</b> 济南西站</p>
+        <p><b>到达:</b> 趵突泉</p>
+        <p><b>方式:</b> 公交</p>
+        <p><b>详情:</b> 11.2 公里, 0.45 小时, 3.37 元</p>
+    </div>
+    <div class="segment">
+        <p><b>出发:</b> 趵突泉</p>
+        <p><b>到达:</b> 济南西站</p>
+        <p><b>方式:</b> 公交</p>
+        <p><b>详情:</b> 11.2 公里, 0.45 小时, 3.37 元</p>
+    </div>
+    <div class="segment">
+        <p><b>出发:</b> 济南西站</p>
+        <p><b>到达:</b> 上海虹桥站</p>
+        <p><b>方式:</b> 高铁</p>
+        <p><b>详情:</b> 735.3 公里, 2.94 小时, 294.12 元</p>
+    </div>
+    <div class="segment">
+        <p><b>出发:</b> 上海虹桥站</p>
+        <p><b>到达:</b> 外滩</p>
+        <p><b>方式:</b> 公交</p>
+        <p><b>详情:</b> 15.8 公里, 0.63 小时, 4.73 元</p>
+    </div>
+    <div class="segment">
+        <p><b>出发:</b> 外滩</p>
+        <p><b>到达:</b> 上海虹桥站</p>
+        <p><b>方式:</b> 公交</p>
+        <p><b>详情:</b> 15.8 公里, 0.63 小时, 4.73 元</p>
+    </div>
+    <div class="segment">
+        <p><b>出发:</b> 上海虹桥站</p>
+        <p><b>到达:</b> 桂林北站</p>
+        <p><b>方式:</b> 高铁</p>
+        <p><b>详情:</b> 1260.3 公里, 5.04 小时, 504.11 元</p>
+    </div>
+    <div class="segment">
+        <p><b>出发:</b> 桂林北站</p>
+        <p><b>到达:</b> 漓江</p>
+        <p><b>方式:</b> 公交</p>
+        <p><b>详情:</b> 4.8 公里, 0.19 小时, 1.44 元</p>
+    </div>
+    <div class="segment">
+        <p><b>出发:</b> 漓江</p>
+        <p><b>到达:</b> 桂林北站</p>
+        <p><b>方式:</b> 公交</p>
+        <p><b>详情:</b> 4.8 公里, 0.19 小时, 1.44 元</p>
+    </div>
+    <div class="segment">
+        <p><b>出发:</b> 桂林北站</p>
+        <p><b>到达:</b> 北京南站</p>
+        <p><b>方式:</b> 高铁</p>
+        <p><b>详情:</b> 1714.2 公里, 6.86 小时, 685.68 元</p>
+    </div>
+    <div class="segment">
+        <p><b>出发:</b> 北京南站</p>
+        <p><b>到达:</b> 故宫</p>
+        <p><b>方式:</b> 公交</p>
+        <p><b>详情:</b> 5.9 公里, 0.24 小时, 1.77 元</p>
+    </div>
+    <div class="total">
+        <p><b>总距离:</b> 4141.7 公里</p>
+        <p><b>总时间:</b> 19.28 小时</p>
+        <p><b>总花费:</b> 1649.15 元</p>
+    </div>
+</div>
+
+<div id="map"></div>
+
+<script>
+    const map = L.map('map').setView([35.8617, 104.1954], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
+      .then(res => res.json())
+      .then(data => {
+        L.geoJSON(data, {
+          style: {
+            color: '#666',
+            weight: 1,
+            opacity: 0.8,
+            fillColor: '#888',
+            fillOpacity: 0.1
+          }
+        }).addTo(map);
+      });
+
+    const landmarkIcon = new L.Icon({ iconUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzAwNzhmZiIgd2lkdGg9IjMycHgiIGhlaWdodD0iMzJweCI+PHBhdGggZD0iTTEyIDJDOC4xMyAyIDUgNS4xMyA1IDljMCA1LjI1IDcgMTMgNyAxM3M3LTcuNzUgNy0xM0MxOSAxMyAxMiAyem0wIDkuNWMtMS4zOCAwLTIuNS0xLjEyLTIuNS0yLjVzMS4xMi0yLjUgMi41LTIuNSAyLjUgMS4xMiAyLjUgMi41LTEuMTIgMi41LTIuNSAyLjV6Ii8+PC9zdmc+', iconSize: [32, 32], iconAnchor: [16, 32], popupAnchor: [0, -32] });
+    const airportIcon = new L.Icon({ iconUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGhlaWdodD0iMjRweCIgdmlld0JveD0iMCAwIDI0IDI0IiB3aWR0aD0iMjRweCIgZmlsbD0iIzAwMDAwMCI+PHBhdGggZD0iTTAsMCBIMjRWMEgyNEwwLDAgWiIgZmlsbD0ibm9uZSIvPjxwYXRoIGQ9Ik0yMSw5LjVjMC0uODMtLjY3LTEuNS0xLjUtMS41SDUuNjFMMzgsNkgxNFY0YzAtLjU1LTAuNDUtMS0xLTFIMTAuNWwtMiwySDd2Mi41bC0yLDIvMTAuNSwzLjUgVjIxaDJ2LTJsMS41LTEuNUgyMC41QzIwLjY3LDE2LjUgMjEsMTYuMzMgMjEsMTYuMTZWMTAuNUwyMSw5LjV6Ii8+PC9zdmc+', iconSize: [28, 28], iconAnchor: [14, 14] });
+    const hsrIcon = new L.Icon({ iconUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGVuYWJsZS1iYWNrZ3JvdW5kPSJuZXcgMCAwIDI0IDI0IiBoZWlnaHQ9IjI0cHgiIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0cHgiIGZpbGw9IiMwMDAwMDAiPjxnLz48Zz48cGF0aCBkPSJNMiwxNmgyMGMyLjIyLDAsNC0xLjc4LDQtNFY0YzAtMS4zLTAuODEtMi40My0yLTIuODJWNEgyVjkuMTdDMy4xOSw5LjU3LDQsMTAuNyw0LDEycy0wLjgxLDIuNDMtMiwyLjg0VjE2eiBNMTgsOUg2VjVINzhWOUg2djJoMTJWOUwxOCw5eiIvPjxwYXRoIGQ9Ik0xOCwxOFYxM0g2djVDNC4xNywxMywzLDE0Ljc4LDMsMTZoMThjMC0xLjIyLTEuMTctMy0zLTN6IE0xMS41LDE3LjVjLTAuODMsMC0xLjUtMC42Ny0xLjUtMS41czAuNjctMS41LDEuNS0xLjVTMTIuNSwxNS4xNywxMi41LDE2UzEyLjMzLDE3LjUsMTEuNSwxNy41eiBNMTYuNSwxNy41Yy0wLjg0LDAtMS41LTAuNjctMS41LTEuNXMwLjY2LTEuNSwxLjUtMS41czEuNSwwLjY3LDEuNSwxLjVTLTkuODMsMTcuNSwxNi41LDE3LjV6Ii8+PC9nPg0KPC9zdmc+', iconSize: [28, 28], iconAnchor: [14, 14] });
+    function getIcon(nodeType) { switch(nodeType) { case 'airport': return airportIcon; case 'hsr': return hsrIcon; default: return landmarkIcon; } }
+
+    const bounds = L.latLngBounds();
+    L.polyline([[39.916300, 116.397200], [39.865200, 116.378600]], { color: '#7ED321', weight: 5, opacity: 0.8 }).addTo(map).bindPopup('<b>故宫 到 北京南站</b><p>方式: 公交</p><p>距离: 5.9 公里</p><p>时间: 0.24 小时</p><p>花费: 1.77 元</p>');
+    L.marker([39.916300, 116.397200], { icon: getIcon('landmark') }).addTo(map).bindTooltip('故宫');
+    L.marker([39.865200, 116.378600], { icon: getIcon('hsr') }).addTo(map).bindTooltip('北京南站');
+    bounds.extend([39.916300, 116.397200]);
+    bounds.extend([39.865200, 116.378600]);
+    L.polyline([[39.865200, 116.378600], [36.682400, 116.875200]], { color: '#50E3C2', weight: 5, opacity: 0.8 }).addTo(map).bindPopup('<b>北京南站 到 济南西站</b><p>方式: 高铁</p><p>距离: 356.6 公里</p><p>时间: 1.43 小时</p><p>花费: 142.62 元</p>');
+    L.marker([36.682400, 116.875200], { icon: getIcon('hsr') }).addTo(map).bindTooltip('济南西站');
+    bounds.extend([39.865200, 116.378600]);
+    bounds.extend([36.682400, 116.875200]);
+    L.polyline([[36.682400, 116.875200], [36.675900, 117.000900]], { color: '#7ED321', weight: 5, opacity: 0.8 }).addTo(map).bindPopup('<b>济南西站 到 趵突泉</b><p>方式: 公交</p><p>距离: 11.2 公里</p><p>时间: 0.45 小时</p><p>花费: 3.37 元</p>');
+    L.marker([36.675900, 117.000900], { icon: getIcon('landmark') }).addTo(map).bindTooltip('趵突泉');
+    bounds.extend([36.682400, 116.875200]);
+    bounds.extend([36.675900, 117.000900]);
+    L.polyline([[36.675900, 117.000900], [36.682400, 116.875200]], { color: '#7ED321', weight: 5, opacity: 0.8 }).addTo(map).bindPopup('<b>趵突泉 到 济南西站</b><p>方式: 公交</p><p>距离: 11.2 公里</p><p>时间: 0.45 小时</p><p>花费: 3.37 元</p>');
+    bounds.extend([36.675900, 117.000900]);
+    bounds.extend([36.682400, 116.875200]);
+    L.polyline([[36.682400, 116.875200], [31.194600, 121.326700]], { color: '#50E3C2', weight: 5, opacity: 0.8 }).addTo(map).bindPopup('<b>济南西站 到 上海虹桥站</b><p>方式: 高铁</p><p>距离: 735.3 公里</p><p>时间: 2.94 小时</p><p>花费: 294.12 元</p>');
+    L.marker([31.194600, 121.326700], { icon: getIcon('hsr') }).addTo(map).bindTooltip('上海虹桥站');
+    bounds.extend([36.682400, 116.875200]);
+    bounds.extend([31.194600, 121.326700]);
+    L.polyline([[31.194600, 121.326700], [31.239300, 121.483900]], { color: '#7ED321', weight: 5, opacity: 0.8 }).addTo(map).bindPopup('<b>上海虹桥站 到 外滩</b><p>方式: 公交</p><p>距离: 15.8 公里</p><p>时间: 0.63 小时</p><p>花费: 4.73 元</p>');
+    L.marker([31.239300, 121.483900], { icon: getIcon('landmark') }).addTo(map).bindTooltip('外滩');
+    bounds.extend([31.194600, 121.326700]);
+    bounds.extend([31.239300, 121.483900]);
+    L.polyline([[31.239300, 121.483900], [31.194600, 121.326700]], { color: '#7ED321', weight: 5, opacity: 0.8 }).addTo(map).bindPopup('<b>外滩 到 上海虹桥站</b><p>方式: 公交</p><p>距离: 15.8 公里</p><p>时间: 0.63 小时</p><p>花费: 4.73 元</p>');
+    bounds.extend([31.239300, 121.483900]);
+    bounds.extend([31.194600, 121.326700]);
+    L.polyline([[31.194600, 121.326700], [25.308100, 110.318600]], { color: '#50E3C2', weight: 5, opacity: 0.8 }).addTo(map).bindPopup('<b>上海虹桥站 到 桂林北站</b><p>方式: 高铁</p><p>距离: 1260.3 公里</p><p>时间: 5.04 小时</p><p>花费: 504.11 元</p>');
+    L.marker([25.308100, 110.318600], { icon: getIcon('hsr') }).addTo(map).bindTooltip('桂林北站');
+    bounds.extend([31.194600, 121.326700]);
+    bounds.extend([25.308100, 110.318600]);
+    L.polyline([[25.308100, 110.318600], [25.273600, 110.290000]], { color: '#7ED321', weight: 5, opacity: 0.8 }).addTo(map).bindPopup('<b>桂林北站 到 漓江</b><p>方式: 公交</p><p>距离: 4.8 公里</p><p>时间: 0.19 小时</p><p>花费: 1.44 元</p>');
+    L.marker([25.273600, 110.290000], { icon: getIcon('landmark') }).addTo(map).bindTooltip('漓江');
+    bounds.extend([25.308100, 110.318600]);
+    bounds.extend([25.273600, 110.290000]);
+    L.polyline([[25.273600, 110.290000], [25.308100, 110.318600]], { color: '#7ED321', weight: 5, opacity: 0.8 }).addTo(map).bindPopup('<b>漓江 到 桂林北站</b><p>方式: 公交</p><p>距离: 4.8 公里</p><p>时间: 0.19 小时</p><p>花费: 1.44 元</p>');
+    bounds.extend([25.273600, 110.290000]);
+    bounds.extend([25.308100, 110.318600]);
+    L.polyline([[25.308100, 110.318600], [39.865200, 116.378600]], { color: '#50E3C2', weight: 5, opacity: 0.8 }).addTo(map).bindPopup('<b>桂林北站 到 北京南站</b><p>方式: 高铁</p><p>距离: 1714.2 公里</p><p>时间: 6.86 小时</p><p>花费: 685.68 元</p>');
+    bounds.extend([25.308100, 110.318600]);
+    bounds.extend([39.865200, 116.378600]);
+    L.polyline([[39.865200, 116.378600], [39.916300, 116.397200]], { color: '#7ED321', weight: 5, opacity: 0.8 }).addTo(map).bindPopup('<b>北京南站 到 故宫</b><p>方式: 公交</p><p>距离: 5.9 公里</p><p>时间: 0.24 小时</p><p>花费: 1.77 元</p>');
+    bounds.extend([39.865200, 116.378600]);
+    bounds.extend([39.916300, 116.397200]);
+
+    if (bounds.isValid()) { map.fitBounds(bounds, { padding: [50, 50] }); }
+
+    const legend = L.control({position: 'bottomright'});
+    legend.onAdd = function (map) {
+        const div = L.DomUtil.create('div', 'info legend');
+        const modes = [{mode: '驾车', color: '#4A90E2'}, {mode: '高铁', color: '#50E3C2'}, {mode: '飞机', color: '#F5A623'}, {mode: '公交', color: '#7ED321'}];
+        div.innerHTML = '<h4>图例</h4>';
+        for (let i = 0; i < modes.length; i++) {
+            div.innerHTML += '<div class="legend-item"><i style="background:' + modes[i].color + '"></i>' + modes[i].mode + '</div>';
+        }
+        return div;
+    };
+    legend.addTo(map);
+</script>
+
+</body>
+</html>
