@@ -1,6 +1,6 @@
 # 交通网络路径规划与可视化系统
 
-这是一个使用C语言实现的、功能丰富的路径规划项目，旨在为新手提供一个学习数据结构、核心图算法和模块化编程的实践范例。它不仅能计算两点或多点间的理论最优路径，还能将结果生成一个交互式的HTML地图报告，非常直观。
+这是一个使用C语言实现的、功能丰富的路径规划项目。它不仅能计算两点或多点间的理论最优路径，还能将结果生成一个交互式的HTML地图报告，非常直观。
 
 ![项目截图](https://raw.githubusercontent.com/MizMiz6/traffic-planner-screenshots/main/screenshot.png)
 
@@ -37,8 +37,7 @@
 
 1.  **克隆或下载项目**
     ```bash
-    git clone <your-repo-url>
-    cd <project-directory>
+    git clone https://github.com/Boylees/traffic_planner
     ```
 
 2.  **编译项目**
