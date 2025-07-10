@@ -69,7 +69,7 @@ static TravelInfo calculate_travel_info(double distance_km, TransportMode mode, 
     info.is_reachable = 1;
     if (is_intra_city) { // 市内交通有特定的速度和成本模型
         if (mode == DRIVING) {
-            info.time_hours = distance_km / 30.0; // 市内驾车速度更慢
+            info.time_hours = distance_km / 30.0; // 市内驾车速度更快
             info.cost_yuan = distance_km * 1.5;   // 市内驾车成本更高
         } else { // 默认为公交
             info.time_hours = distance_km / 25.0; // 市内公交速度
@@ -102,7 +102,7 @@ RoutePath* find_shortest_path(const TrafficNetwork* network, int start_node_id, 
     // --- 数据归一化准备 ---
     // 为了让时间和花费有可比性，需要将它们归一化到相似的尺度(0-1)。
     // 这里估算一个理论上的最大时间和花费，作为归一化的分母。
-    const double MAX_DIST_ESTIMATE = 6000.0;
+    const double MAX_DIST_ESTIMATE = 6000.0;                    // 假设最大距离为6000公里 
     const double MAX_TIME_ESTIMATE = MAX_DIST_ESTIMATE / 40.0;  // 按最慢的公交速度估算
     const double MAX_COST_ESTIMATE = MAX_DIST_ESTIMATE * 1.5;   // 按最贵的驾车成本估算
 
@@ -319,7 +319,7 @@ RoutePath* solve_tsp(const TrafficNetwork* network, int* node_ids_to_visit, int 
     // 4. 从终点回溯，重建完整路径
     RoutePath* final_path = (RoutePath*)calloc(1, sizeof(RoutePath));
     int current_city_idx = tour_end_city;
-    int current_mask = final_mask; // 修复: 初始化当前掩码，用于回溯
+    int current_mask = final_mask; 
     // 先拼接上从最后一个城市返回起点的路段
     stitch_paths(final_path, find_shortest_path(network, node_ids[tour_end_city], node_ids[0], time_weight, cost_weight));
     while (current_city_idx != 0) {

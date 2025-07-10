@@ -16,7 +16,7 @@
  */
 static const char* get_color_for_mode(TransportMode mode) {
     switch (mode) {
-        case DRIVING:           return "#4A90E2"; // 鲜艳的蓝色
+        case DRIVING:           return "#4A90E2"; // 蓝色
         case HIGH_SPEED_RAIL:   return "#50E3C2"; // 青绿色
         case FLIGHT:            return "#F5A623"; // 橙黄色
         case BUS:               return "#7ED321"; // 鲜绿色

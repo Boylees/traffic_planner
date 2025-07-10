@@ -13,6 +13,8 @@ typedef struct {
     int node_count;         ///< 节点数组中的元素总数。
     CityMeta* cities;       ///< 指向城市元数据数组的指针。
     int city_count;         ///< 城市数组中的元素总数。
+    int node_capacity;
+    int city_capacity;
 } TrafficNetwork;
 
 /**

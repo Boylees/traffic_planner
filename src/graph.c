@@ -9,131 +9,225 @@
 #include <stdlib.h>
 #include <string.h>
 
+/**
+ * @brief 从CSV文件创建交通网络结构
+ * @details 该函数负责：
+ *          1. 打开并解析CSV格式的节点数据文件
+ *          2. 动态分配内存存储网络结构
+ *          3. 构建城市和节点的索引关系
+ * 
+ * @param nodes_csv_path CSV文件路径
+ * @return TrafficNetwork* 成功返回网络指针，失败返回NULL
+ */
 TrafficNetwork* traffic_network_create(const char* nodes_csv_path) {
-    // 以只读模式打开CSV文件
-    FILE* fp = fopen(nodes_csv_path, "r");
+    // ==================== 文件打开阶段 ====================
+    // 以只读模式打开CSV文件，使用二进制模式避免文本转换问题
+    FILE* fp = fopen(nodes_csv_path, "rb");
     if (fp == NULL) {
-        // 如果文件打开失败，向标准错误流打印错误信息并返回NULL
-        fprintf(stderr, "错误：无法打开 %s 文件\n", nodes_csv_path);
+        // 文件打开失败时打印具体错误信息（包括errno）
+        fprintf(stderr, "错误：无法打开文件 %s (错误码: %d)\n", 
+                nodes_csv_path, errno);
         return NULL;
     }
 
-    // 为整个交通网络结构体分配内存
-    TrafficNetwork* network = (TrafficNetwork*)malloc(sizeof(TrafficNetwork));
+    // ==================== 内存分配阶段 ====================
+    // 为整个交通网络结构体分配内存（使用calloc确保零初始化）
+    TrafficNetwork* network = (TrafficNetwork*)calloc(1, sizeof(TrafficNetwork));
     if (!network) {
-        // 如果内存分配失败，打印错误信息，关闭文件并返回NULL
         fprintf(stderr, "错误: 交通网络对象内存分配失败\n");
         fclose(fp);
         return NULL;
     }
 
     // --- 初始化动态数组 ---
-    // 为节点和城市数组预分配一个初始容量，以减少频繁的realloc调用
-    const int INITIAL_CAP_NODES = 256;
-    const int INITIAL_CAP_CITIES = 128;
-    // 分配初始内存
-    network->nodes = malloc(INITIAL_CAP_NODES * sizeof(Node));
-    network->cities = malloc(INITIAL_CAP_CITIES * sizeof(CityMeta));
-    // 记录当前容量
-    int node_cap = INITIAL_CAP_NODES;
-    int city_cap = INITIAL_CAP_CITIES;
-    // 初始化当前元素数量为0
+    // 为节点和城市数组预分配初始容量，减少realloc调用
+    const int INITIAL_CAP_NODES = 256;   // 节点数组初始容量
+    const int INITIAL_CAP_CITIES = 128;  // 城市数组初始容量
+    
+    // 分配节点数组内存（使用calloc初始化）
+    network->nodes = (Node*)calloc(INITIAL_CAP_NODES, sizeof(Node));
+    // 分配城市元数据数组内存
+    network->cities = (CityMeta*)calloc(INITIAL_CAP_CITIES, sizeof(CityMeta));
+    
+    // 记录当前分配容量（新增字段）
+    network->node_capacity = INITIAL_CAP_NODES;
+    network->city_capacity = INITIAL_CAP_CITIES;
+    // 初始化元素计数器
     network->node_count = 0;
     network->city_count = 0;
-    
-    // 检查初始内存分配是否成功
+
+    // 检查关键内存分配是否成功
     if (!network->nodes || !network->cities) {
         fprintf(stderr, "错误: 节点或城市数组内存分配失败\n");
-        // 如果任一分配失败，需要释放所有已成功分配的内存，防止泄漏
-        free(network->nodes);   // free(NULL)是安全的
-        free(network->cities);
-        free(network);
+        // 使用销毁函数确保安全释放所有已分配内存
+        traffic_network_destroy(network);
         fclose(fp);
         return NULL;
     }
 
-    char line[512]; // 用于存储从文件中读取的每一行
-    fgets(line, sizeof(line), fp); // 读取并丢弃CSV文件的第一行（表头）
+    // ==================== 文件解析阶段 ====================
+    char line[512]; // 行缓冲区（足够大以容纳长行）
+    
+    // 读取并丢弃CSV文件的第一行（表头）
+    if (!fgets(line, sizeof(line), fp)) {
+        fprintf(stderr, "警告: 空文件或读取表头失败\n");
+    }
 
-    // 逐行读取文件内容
+    // 逐行解析文件内容
     while (fgets(line, sizeof(line), fp)) {
-        // 跳过空行或以'#'开头的注释行
-        if (line[0] == '#' || line[0] == '\n') continue;
+        // --- 行预处理 ---
+        // 跳过空行、纯换行行和注释行（以#开头）
+        if (line[0] == '#' || line[0] == '\n' || line[0] == '\r') {
+            continue;
+        }
 
-        // --- 解析CSV行 ---
-        char city_name[50] = {0};
-        char type_str[20] = {0};
-        char node_name[100] = {0};
-        double lat = 0.0, lon = 0.0;
+        // --- CSV字段解析 ---
+        char city_name[50] = {0};  // 城市名称缓冲区
+        char type_str[20] = {0};   // 节点类型字符串缓冲区
+        char node_name[100] = {0}; // 节点名称缓冲区
+        double lat = 0.0, lon = 0.0; // 经纬度
         
-        // 使用sscanf从行中解析数据，%[^,]是一个匹配模式，表示读取直到逗号之前的所有字符
-        int parsed = sscanf(line, "%49[^,],%19[^,],%99[^,],%lf,%lf", city_name, type_str, node_name, &lat, &lon);
-        if (parsed != 5) continue; // 如果行格式不匹配（例如缺少字段），则跳过此行
+        // 使用安全格式解析（限制字段长度，防止缓冲区溢出）
+        int parsed = sscanf(line, "%49[^,],%19[^,],%99[^,],%lf,%lf", 
+                           city_name, type_str, node_name, &lat, &lon);
+        
+        // 检查是否成功解析5个字段（城市名,类型,节点名,纬度,经度）
+        if (parsed != 5) {
+            fprintf(stderr, "警告: 跳过格式错误行: %s", line);
+            continue;
+        }
 
-        // --- 将字符串类型转换为枚举类型 ---
+        // --- 节点类型转换 ---
         NodeType ntype;
-        if (strcmp(type_str, "landmark") == 0) ntype = NODE_TYPE_LANDMARK;
-        else if (strcmp(type_str, "airport") == 0) ntype = NODE_TYPE_AIRPORT;
-        else if (strcmp(type_str, "hsr") == 0) ntype = NODE_TYPE_HSR_STATION;
-        else continue; // 如果是不支持的类型，则跳过
+        if (strcmp(type_str, "landmark") == 0) {
+            ntype = NODE_TYPE_LANDMARK;
+        } 
+        else if (strcmp(type_str, "airport") == 0) {
+            ntype = NODE_TYPE_AIRPORT;
+        }
+        else if (strcmp(type_str, "hsr") == 0) {
+            ntype = NODE_TYPE_HSR_STATION;
+        }
+        else {
+            fprintf(stderr, "警告: 未知节点类型 '%s'\n", type_str);
+            continue; // 跳过不支持的类型
+        }
 
-        // --- 查找或创建城市 ---
+        // --- 城市管理 ---
+        // 查找或创建城市记录
         int city_id = -1;
-        // 遍历已有的城市，检查是否已存在
+        
+        // 遍历现有城市查找匹配项
         for (int i = 0; i < network->city_count; i++) {
             if (strcmp(network->cities[i].city_name, city_name) == 0) {
-                city_id = network->cities[i].city_id; // 如果找到，记录其ID
+                city_id = i;
                 break;
             }
         }
-        // 如果city_id仍然是-1，说明这是一个新城市
+        
+        // 如果是新城市
         if (city_id == -1) {
-            city_id = network->city_count; // 新城市的ID就是当前城市的数量
-            // 检查城市数组是否已满
-            if (network->city_count >= city_cap) {
-                city_cap *= 2; // 如果已满，容量翻倍
-                CityMeta* new_cities = realloc(network->cities, city_cap * sizeof(CityMeta));
-                if (!new_cities) { /* 错误处理 */ traffic_network_destroy(network); fclose(fp); return NULL; }
-                network->cities = new_cities; // 指向新的内存区域
+            // 检查城市数组容量
+            if (network->city_count >= network->city_capacity) {
+                // 容量翻倍策略减少realloc次数
+                int new_capacity = network->city_capacity * 2;
+                CityMeta* new_cities = (CityMeta*)realloc(
+                    network->cities, new_capacity * sizeof(CityMeta));
+                
+                if (!new_cities) {
+                    fprintf(stderr, "错误: 城市数组扩容失败\n");
+                    continue; // 跳过当前节点（不终止整个加载过程）
+                }
+                
+                network->cities = new_cities;
+                network->city_capacity = new_capacity;
             }
-            // 添加新城市信息
-            network->cities[city_id].city_id = city_id;
-            // 使用strncpy防止缓冲区溢出
-            strncpy(network->cities[city_id].city_name, city_name, sizeof(network->cities[city_id].city_name) - 1);
-            network->cities[city_id].landmark_node_id = -1;
-            network->cities[city_id].airport_node_id = -1;
-            network->cities[city_id].hsr_node_id = -1;
-            network->city_count++; // 城市数量加一
+            
+            // 初始化新城市记录
+            city_id = network->city_count;
+            CityMeta* city = &network->cities[city_id];
+            
+            city->city_id = city_id;
+            // 安全拷贝城市名称（确保终止符）
+            strncpy(city->city_name, city_name, sizeof(city->city_name) - 1);
+            city->city_name[sizeof(city->city_name) - 1] = '\0';
+            
+            // 初始化枢纽节点ID为-1（表示未设置）
+            city->landmark_node_id = -1;
+            city->airport_node_id = -1;
+            city->hsr_node_id = -1;
+            
+            network->city_count++;
         }
 
-        // --- 添加新节点 ---
-        // 检查节点数组是否已满
-        if (network->node_count >= node_cap) {
-            node_cap *= 2; // 容量翻倍
-            Node* new_nodes = realloc(network->nodes, node_cap * sizeof(Node));
-            if (!new_nodes) { /* 错误处理 */ traffic_network_destroy(network); fclose(fp); return NULL; }
+        // --- 节点添加 ---
+        // 检查节点数组容量
+        if (network->node_count >= network->node_capacity) {
+            // 容量翻倍策略
+            int new_capacity = network->node_capacity * 2;
+            Node* new_nodes = (Node*)realloc(
+                network->nodes, new_capacity * sizeof(Node));
+            
+            if (!new_nodes) {
+                fprintf(stderr, "错误: 节点数组扩容失败\n");
+                continue;
+            }
+            
             network->nodes = new_nodes;
+            network->node_capacity = new_capacity;
         }
-        int node_id = network->node_count;
-        // 使用C99的指定初始化器来设置新节点的值
-        network->nodes[node_id] = (Node){.id = node_id, .city_id = city_id, .type = ntype, .latitude = lat, .longitude = lon};
-        strncpy(network->nodes[node_id].name, node_name, sizeof(network->nodes[node_id].name) - 1);
-        network->node_count++; // 节点数量加一
-
-        // --- 更新城市的快速索引 ---
-        // 如果该类型的枢纽尚未被记录，则记录此节点的ID
-        if (ntype == NODE_TYPE_LANDMARK && network->cities[city_id].landmark_node_id == -1)
-            network->cities[city_id].landmark_node_id = node_id;
-        if (ntype == NODE_TYPE_AIRPORT && network->cities[city_id].airport_node_id == -1)
-            network->cities[city_id].airport_node_id = node_id;
-        if (ntype == NODE_TYPE_HSR_STATION && network->cities[city_id].hsr_node_id == -1)
-            network->cities[city_id].hsr_node_id = node_id;
+        
+        // 获取当前节点指针
+        Node* node = &network->nodes[network->node_count];
+        
+        // 初始化节点字段
+        node->id = network->node_count; // ID等于当前计数
+        node->city_id = city_id;
+        node->type = ntype;
+        node->latitude = lat;
+        node->longitude = lon;
+        
+        // 安全拷贝节点名称（确保终止符）
+        strncpy(node->name, node_name, sizeof(node->name) - 1);
+        node->name[sizeof(node->name) - 1] = '\0';
+        
+        // --- 更新城市索引 ---
+        // 如果是该城市第一个此类枢纽节点，则记录其ID
+        CityMeta* city = &network->cities[city_id];
+        switch (ntype) {
+            case NODE_TYPE_LANDMARK:
+                if (city->landmark_node_id == -1) {
+                    city->landmark_node_id = node->id;
+                }
+                break;
+                
+            case NODE_TYPE_AIRPORT:
+                if (city->airport_node_id == -1) {
+                    city->airport_node_id = node->id;
+                }
+                break;
+                
+            case NODE_TYPE_HSR_STATION:
+                if (city->hsr_node_id == -1) {
+                    city->hsr_node_id = node->id;
+                }
+                break;
+                
+            default:
+                break; // 不应发生（前面已过滤）
+        }
+        
+        network->node_count++; // 成功添加节点
     }
+
+    // ==================== 清理阶段 ====================
     fclose(fp); // 关闭文件
     
-    // 可以在这里添加realloc来缩减数组到实际大小，以节省内存，但为了简单起见省略了
-    printf("成功加载 %d 个城市，%d 个节点\n", network->city_count, network->node_count);
-    return network; // 返回创建好的网络对象
+    // 打印加载统计信息（调试用）
+    printf("成功加载: %d 个城市, %d 个节点\n", 
+           network->city_count, network->node_count);
+    
+    return network;
 }
 
 void traffic_network_destroy(TrafficNetwork* network) {
